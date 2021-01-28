@@ -1,0 +1,22 @@
+Title:  c4-05-2-3f
+Description:  
+Email:  philipp.lange@ubc.ca
+Submitted:  2020-10-01 02:06:52.453240+00:00
+Foreground file:  meyer-s4-cluster1168-noSARS.txt
+Foreground format:  Text file peptide list
+Context file:  Swiss-Prot human proteome
+Context format:  Swiss-Prot Human
+P-value cutoff:  0.05
+Minimum occurrences:  2
+Fold difference cutoff:  3.0
+Max depth:  None
+Sequence extension:  True
+Extension direction:  n
+Require protein identifiers:  True
+Width:  8
+Centered sequences:  True
+Multiple testing correction:  True
+Positional weighting:  True
+Position specific background:  True
+Compound residue detection:  True
+Compound residue decomposition:  True
