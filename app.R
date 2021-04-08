@@ -67,6 +67,8 @@ server <- function(input, output) {
         }
     })
     output$checkSamples<-renderUI({
+        validate(need(input$jobID,"Please input task ID!"),
+                 need(input$title, "Please input task title!"))
         checkboxGroupInput("checkSamples", 
                            label="Check the samples to be included in analysis", 
                            choiceNames=as.list(samplelist()),
