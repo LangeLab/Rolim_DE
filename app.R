@@ -12,11 +12,17 @@ ui <- dashboardPage(
     dashboardSidebar(
         textInput("jobID",label="Please input the string indicating job ID sent by email from RoLim:"),
         textInput("title",label="Please input the title of task:"),
+        selectInput("InputFormat",
+                    label="Select the format of foreground file uploaded to RoLiM:",
+                    choices=c("Long format, with multiple samples", "Pre-aligned sequences only"),
+                    selected=NULL),
+        conditionalPanel("input.InputFormat=='Long format, with multiple samples'",
+                         uiOutput("quant_data_selection"),),
         uiOutput("checkSamples"),
         checkboxInput("whetherUpload",
                       "Upload extra quantitative files?"),
         conditionalPanel('input.whetherUpload==1',
-                         fileInput("quant_data", label="please upload .csv/.xlsx file of quantitative data with quantitative intensities of terminis:",
+                         fileInput("quant_data", label="please upload .csv/.xlsx file of quantitative data with quantitative intensities in long format:",
                                    multiple = FALSE,
                                    accept = c("text/csv",
                                               "text/comma-separated-values,text/plain",
@@ -50,10 +56,15 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
     resultpath<-reactive({
-        paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
+    paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
     })
     samplelist<-reactive({
-        list.files(path=resultpath())
+        if(input$InputFormat=="Long format, with multiple samples"){
+        temp<-list.files(path=resultpath())
+        temp[temp!="summary"]}else{
+            validate(need(!is.null(input$quant_data),""))
+            unique(quant_data()[,1])
+        }
     })
     output$checkSamples<-renderUI({
         checkboxGroupInput("checkSamples", 
@@ -61,42 +72,75 @@ server <- function(input, output) {
                            choiceNames=as.list(samplelist()),
                            choiceValues=as.list(samplelist()))
     })
-    all.pattern <- reactive({
-        find_all_pattern(resultpath(),input$checkSamples)
-    })
+    
     pattern.summary.list <- reactive({
         ls<-list()
+        if (input$InputFormat=="Long format, with multiple samples"){
         i=1
         for(i in samplelist()){
-            temp.tab<-read.csv(paste0(resultpath(), i, "/c4_05_2_3f/patterns/_pattern_summary_table.csv"), header=TRUE,sep=",")[,-1]
+            temp.tab<-read.csv(paste0(resultpath(), i, "/patterns/_pattern_summary_table.csv"), header=TRUE,sep=",")[,-1]
             temp.tab$Pattern<-as.character(temp.tab$Pattern)
             temp.tab$Enrichment..Sample.Frequency...Background.Frequency.<-as.numeric(temp.tab$Enrichment..Sample.Frequency...Background.Frequency.)
             ls[[i]]<-temp.tab
         }
+        }else{
+            i=1
+            for(i in samplelist()){
+                temp.tab<-read.csv(paste0(resultpath(),"patterns/_pattern_summary_table.csv"), header=TRUE,sep=",")[,-1]
+                temp.tab$Pattern<-as.character(temp.tab$Pattern)
+                temp.tab$Enrichment..Sample.Frequency...Background.Frequency.<-as.numeric(temp.tab$Enrichment..Sample.Frequency...Background.Frequency.)
+                ls[[i]]<-temp.tab
+            }   
+        }
         ls
     })
+    
+    all.pattern <- reactive({
+        find_all_pattern(pattern.summary.list(),input$checkSamples)
+    })
+    
+    quant_data_summary_table<-reactive({
+        validate(need(input$title!="", ""))
+        df<-read.table(paste0(resultpath(),"summary/",input$title,"_sequence_summary_table.txt"))
+        cbind(df[,1:2],df[,unlist(lapply(df,is.double))])
+    })
+    
+    output$quant_data_selection<-renderUI({
+    selectInput("colIntensity",
+                    label="Select the column of quantitative intensities:",
+                    choices=colnames(quant_data_summary_table())[-c(1:2)],
+                    selected=NULL)
+    })
+    
     quant_data<-reactive({
+        if(input$whetherUpload==TRUE){
         req(input$quant_data)
         if(grepl(".xlsx",input$quant_data$name)){
             df <- read.xlsx(input$quant_data$datapath)}
         #match_checked_samples(df, input$checkSamples)
+        }else{
+            df <- cbind(quant_data_summary_table()[,1:2], quant_data_summary_table()[,input$colIntensity])
+        }
+        colnames(df)<-c("sample","sequence","intensity")
         df
     })
+    
+    
     output$heatmap <- renderPlot({
         validate(need(length(input$checkSamples) > 1, 
                       "Please select more than one samples"))
-        if (input$whetherUpload==FALSE){
-            generate_heatmap(resultpath(),pattern.summary.list(),input$checkSamples, input$heatmapvalue, input$whetherNormal)}else{
-                validate(need(input$quant_data, 
+        validate(need(!is.null(quant_data()), 
                               "Please input your quantitative intensity data"))
-                generate_heatmap(resultpath(),pattern.summary.list(),input$checkSamples, input$heatmapvalue, input$whetherNormal, quant_data())
-            }
+        g<-generate_heatmap(resultpath(), pattern.summary.list(),input$checkSamples, 
+                            input$heatmapvalue, input$whetherNormal, quant_data(),input$InputFormat)
+        g
     })
+    
     output$logomaps<-renderUI({
         validate(need(length(input$checkSamples) > 1, 
                       "Please select more than one samples"))
         lapply(all.pattern(),function(x){
-            output[[paste0("Plotfor",x)]]<-renderPlot({generate_logomap(resultpath(),x, input$checkSamples, input$logomapmethod, input$ticktype)})
+            output[[paste0("Plotfor",x)]]<-renderPlot({generate_logomap(resultpath(), x, input$checkSamples, input$logomapmethod, input$ticktype, input$InputFormat)})
         })
         lapply(all.pattern(),function(x){
             output[[paste0("Tablefor",x)]]<-renderTable({generate_summarytable(pattern.summary.list(),x, input$checkSamples)})

@@ -4,20 +4,18 @@ library(stringr)
 library(gridExtra)
 
 # function for getting all patterns that in the form of sequence files
-find_all_pattern<-function(path,samples){
+find_all_pattern<-function(pslist,samples){
 pattern.seqfile<-list()
 i=1
 for(i in 1:length(samples)){
-  temp.pattern<-read.csv(paste0(path, samples[i], "/c4_05_2_3f/patterns/_pattern_summary_table.csv"),header=TRUE,sep=",")[,2]
-  temp.pattern<-as.character(temp.pattern)
-  pattern.seqfile[[samples[i]]]<-temp.pattern
+  pattern.seqfile[[samples[i]]]<-pslist[[samples[i]]]$Pattern
 }
 all.pattern<-unique(unname(unlist(pattern.seqfile)))
 return(all.pattern)
 }
 
 # function for generating logomaps for each pattern
-generate_logomap<-function(path, pattern, samples,methodin,ticktype){
+generate_logomap<-function(path,pattern,samples,methodin,ticktype,fileformat){
   if (any(is.null(samples))){return()}
   i=1
   seqlogo.ls<-list()
@@ -34,21 +32,25 @@ generate_logomap<-function(path, pattern, samples,methodin,ticktype){
   }
   if(ticktype=="...-1,0,1,...(for odd length only)"){
     midpoint<-floor(nchar(pattern)/2)
-    ticks<-c((-midpoint):midpoint)
+    ticks<-as.character(c((-midpoint):midpoint))
   }
 
   for (i in 1:length(samples)){
     sample<-samples[i]
     ls.seq<-list()
-    if(file.exists(paste0(path,sample,"/c4_05_2_3f/patterns/",pattern,"_sequences.txt"))){
-      ls.seq[[pattern]]<-as.character(read.delim(paste0(path,sample,"/c4_05_2_3f/patterns/",pattern,"_sequences.txt"),
+    if(fileformat=="Long format, with multiple samples"){
+      path1<-paste0(path, sample,"/patterns/")
+    }else{
+      path1<-paste0(path,"/patterns/")
+    }
+    if(file.exists(paste0(path1, pattern,"_sequences.txt"))){
+      ls.seq[[pattern]]<-as.character(read.delim(paste0(path1,pattern,"_sequences.txt"),
                                                  header=FALSE,check.names = FALSE)[,1])
       pcharind<-c(1:nchar(pattern))[-as.integer(gregexpr("x", pattern)[[1]])]
       g<-ggseqlogo(data=ls.seq, method=methodin)
       seqlogo.ls[[sample]]<-g+ggtitle(sample)+
         scale_x_discrete(limits=ticks)+
         annotate('rect', xmin=(pcharind-0.5), xmax=(pcharind+0.5), ymin = -0.05, ymax = max(g[["layers"]][[1]][["data"]][["y"]]), alpha =0.15,fill='red')
-     
     }
   }
   logomap.pattern<-grid.arrange(grobs=seqlogo.ls)
