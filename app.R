@@ -17,7 +17,7 @@ ui <- dashboardPage(
                     choices=c("Long format, with multiple samples", "Pre-aligned sequences only"),
                     selected=NULL),
         conditionalPanel("input.InputFormat=='Long format, with multiple samples'",
-                         uiOutput("quant_data_selection"),),
+                         uiOutput("quant_data_selection")),
         uiOutput("checkSamples"),
         checkboxInput("whetherUpload",
                       "Upload extra quantitative files?"),
@@ -30,6 +30,10 @@ ui <- dashboardPage(
         selectInput("heatmapvalue",
                     label="Choose the variable for Clustering",
                     choices=c("Enrichment Score", "Quantitative intensity"),
+                    selected=NULL),
+        selectInput("direction",
+                    label="select the direction of clustering",
+                    choices=c("row-wise","col-wise"),
                     selected=NULL),
         checkboxInput("whetherNormal",
                       "Z-score normalization for clustering?"),
@@ -48,16 +52,26 @@ ui <- dashboardPage(
     
     dashboardBody(
         fluidRow(box(
-            plotOutput("heatmap")  %>% withSpinner(color="#0dc5c1"))),
+            plotOutput("heatmap")  %>% withSpinner(color="#0dc5c1")
+            )),
         fluidRow(box(
             uiOutput("logomaps")  %>% withSpinner(color="#0dc5c1")))
     )
 )
 
-server <- function(input, output) {
+server <- function(input, output, session){
+    observe({
+        query <- parseQueryString(session$clientData$url_search)
+        updateTextInput(session, "jobID", value = query[["jobID"]])
+        updateTextInput(session, "title", value = query[["title"]])
+    })
+    
     resultpath<-reactive({
+    validate(need(input$jobID,"Please input task ID!"),
+                 need(input$title, "Please input task title!"))
     paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
     })
+
     samplelist<-reactive({
         if(input$InputFormat=="Long format, with multiple samples"){
         temp<-list.files(path=resultpath())
@@ -67,13 +81,11 @@ server <- function(input, output) {
         }
     })
     output$checkSamples<-renderUI({
-        validate(need(input$jobID,"Please input task ID!"),
-                 need(input$title, "Please input task title!"))
         checkboxGroupInput("checkSamples", 
                            label="Check the samples to be included in analysis", 
                            choiceNames=as.list(samplelist()),
                            choiceValues=as.list(samplelist()))
-    })
+    })                                                                 
     
     pattern.summary.list <- reactive({
         ls<-list()
@@ -108,33 +120,51 @@ server <- function(input, output) {
     })
     
     output$quant_data_selection<-renderUI({
-    selectInput("colIntensity",
-                    label="Select the column of quantitative intensities:",
-                    choices=colnames(quant_data_summary_table())[-c(1:2)],
-                    selected=NULL)
+    checkboxGroupInput("colIntensity", 
+                           label="Select the columns of quantitative intensities:", 
+                           choiceNames=as.list(colnames(quant_data_summary_table())[-c(1:2)]),
+                           choiceValues=as.list(colnames(quant_data_summary_table())[-c(1:2)]))
+    })
+    
+    quant_data_summary_table_full<-reactive({
+        validate(need(input$title!="", ""))
+        df<-read.table(paste0(resultpath(),"summary/",input$title,"_sequence_summary_table.txt"))
+        df
     })
     
     quant_data<-reactive({
         if(input$whetherUpload==TRUE){
         req(input$quant_data)
         if(grepl(".xlsx",input$quant_data$name)){
-            df <- read.xlsx(input$quant_data$datapath)}
+            df <- read.xlsx(input$quant_data$datapath)
+        }
         #match_checked_samples(df, input$checkSamples)
         }else{
-            df <- cbind(quant_data_summary_table()[,1:2], quant_data_summary_table()[,input$colIntensity])
+            if(input$direction=="row-wise"){
+            df <- cbind(quant_data_summary_table()[,1:2], apply(quant_data_summary_table()[,input$colIntensity],1,function(x) mean(x,na.rm=TRUE)))
+            colnames(df)<-c("sample","sequence","intensity")
+            }
+            if(input$direction=="col-wise"){
+            df <- transformdata(quant_data_summary_table(),input$checkSamples, input$colIntensity, quant_data_summary_table_full())
+            colnames(df)<-c("sequence",colnames(df)[-1])
+            }
         }
-        colnames(df)<-c("sample","sequence","intensity")
         df
     })
-    
-    
+
     output$heatmap <- renderPlot({
+        if (input$direction=="row-wise"){
         validate(need(length(input$checkSamples) > 1, 
                       "Please select more than one samples"))
         validate(need(!is.null(quant_data()), 
                               "Please input your quantitative intensity data"))
         g<-generate_heatmap(resultpath(), pattern.summary.list(),input$checkSamples, 
-                            input$heatmapvalue, input$whetherNormal, quant_data(),input$InputFormat)
+                            input$heatmapvalue, input$whetherNormal, quant_data(),input$InputFormat)}
+        if (input$direction=="col-wise"){
+        validate(need(length(input$colIntensity) > 1, 
+                          "Please select more than one column of intensity"))
+        g<-genrate_heatmap_col(quant_data(),input$colIntensity,input$whetherNormal)
+        }
         g
     })
     

@@ -54,3 +54,21 @@ generate_heatmap<-function(path,pattern.summary.list, samples, var, whethernorma
   g<-pheatmap(M,colors = my_palette)
   return(g)
 }
+
+
+genrate_heatmap_col<-function(quantdata,colIntensity,whethernormal){
+  patternsstring<-colnames(quantdata)[grep("\\.",colnames(quantdata))]
+  M<-matrix(0,nrow=length(patternsstring),ncol=length(colIntensity))
+  for (i in 1:nrow(M)){
+    ind<-which(quantdata[,patternsstring[i]]==1)
+    M[i,]<-apply(quantdata[ind, colIntensity],2, function(x) mean(x, na.rm=TRUE))
+  }
+  colnames(M)<-colIntensity
+  rownames(M)<-patternsstring
+  if (whethernormal==TRUE){
+    M<-t(scale(t(M)))
+  }
+  g<-pheatmap(M,colors = my_palette)
+  return(g)
+}
+
