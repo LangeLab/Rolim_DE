@@ -7,7 +7,7 @@ source("heatmap.R")
 source("logomaps.R")
 
 ui <- dashboardPage(
-    dashboardHeader(title="Supplemental Tool for RoLim"),
+    dashboardHeader(title="RoLiMviz"),
     
     dashboardSidebar(
         textInput("jobID",label="Please input the string indicating job ID sent by email from RoLim:"),
@@ -51,10 +51,10 @@ ui <- dashboardPage(
     ),
     
     dashboardBody(
-        fluidRow(box(
+        fluidRow(box(width=10,
             plotOutput("heatmap")  %>% withSpinner(color="#0dc5c1")
             )),
-        fluidRow(box(
+        fluidRow(box(width=10,
             uiOutput("logomaps")  %>% withSpinner(color="#0dc5c1")))
     )
 )
@@ -141,7 +141,11 @@ server <- function(input, output, session){
         #match_checked_samples(df, input$checkSamples)
         }else{
             if(input$direction=="row-wise"){
-            df <- cbind(quant_data_summary_table()[,1:2], apply(quant_data_summary_table()[,input$colIntensity],1,function(x) mean(x,na.rm=TRUE)))
+            if (length(input$colIntensity)>1){
+            df <- cbind(quant_data_summary_table()[,1:2], apply(quant_data_summary_table()[,input$colIntensity],1,function(x) mean(x,na.rm=TRUE)))}
+            if (length(input$colIntensity)==1){
+            df <- cbind(quant_data_summary_table()[,1:2], quant_data_summary_table()[,input$colIntensity])
+            }
             colnames(df)<-c("sample","sequence","intensity")
             }
             if(input$direction=="col-wise"){
