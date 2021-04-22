@@ -27,16 +27,15 @@ ui <- dashboardPage(
                                    accept = c("text/csv",
                                               "text/comma-separated-values,text/plain",
                                               ".csv", ".xlsx"))),
-        selectInput("heatmapvalue",
-                    label="Choose the variable for Clustering",
-                    choices=c("Enrichment Score", "Quantitative intensity"),
-                    selected=NULL),
         selectInput("direction",
                     label="select the direction of clustering",
                     choices=c("row-wise","col-wise"),
                     selected=NULL),
+        uiOutput("heatmapvalue"),
         checkboxInput("whetherNormal",
                       "Z-score normalization for clustering?"),
+        checkboxInput("whetherlog2",
+                      "log-2 scale for quantitative intensity?"),
         h4("Configurations for Logomap"),
         selectInput("logomapmethod",
                     label="Choose method for generating logomaps:",
@@ -67,9 +66,10 @@ server <- function(input, output, session){
     })
     
     resultpath<-reactive({
-    validate(need(input$jobID,"Please input task ID!"),
+    validate(#need(input$jobID,"Please input task ID!"),
                  need(input$title, "Please input task title!"))
-    paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
+    #paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
+        paste0("D:/Projects_SiyuanChen/Rolim_DE/",input$title,"/")
     })
 
     samplelist<-reactive({
@@ -85,7 +85,14 @@ server <- function(input, output, session){
                            label="Check the samples to be included in analysis", 
                            choiceNames=as.list(samplelist()),
                            choiceValues=as.list(samplelist()))
-    })                                                                 
+    })
+    output$heatmapvalue<-renderUI({
+        cc<-c("Enrichment Score", "Quantitative intensity")[c(!input$direction=="col-wise",TRUE)]
+            selectInput("heatmapvalue",
+            label="Choose the variable for Clustering",
+            choices=cc,
+            selected=NULL)
+    })
     
     pattern.summary.list <- reactive({
         ls<-list()
@@ -163,11 +170,11 @@ server <- function(input, output, session){
         validate(need(!is.null(quant_data()), 
                               "Please input your quantitative intensity data"))
         g<-generate_heatmap(resultpath(), pattern.summary.list(),input$checkSamples, 
-                            input$heatmapvalue, input$whetherNormal, quant_data(),input$InputFormat)}
+                            input$heatmapvalue, input$whetherNormal, quant_data(),input$InputFormat,input$whetherlog2)}
         if (input$direction=="col-wise"){
         validate(need(length(input$colIntensity) > 1, 
                           "Please select more than one column of intensity"))
-        g<-genrate_heatmap_col(quant_data(),input$colIntensity,input$whetherNormal)
+        g<-genrate_heatmap_col(quant_data(),input$colIntensity,input$whetherNormal,input$whetherlog2)
         }
         g
     })
