@@ -66,10 +66,9 @@ server <- function(input, output, session){
     })
     
     resultpath<-reactive({
-    validate(#need(input$jobID,"Please input task ID!"),
+    validate(need(input$jobID,"Please input task ID!"),
                  need(input$title, "Please input task title!"))
-    #paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
-        paste0("D:/Projects_SiyuanChen/Rolim_DE/",input$title,"/")
+    paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
     })
 
     samplelist<-reactive({
