@@ -38,11 +38,7 @@ generate_logomap<-function(path,pattern,samples,methodin,ticktype,fileformat){
   for (i in 1:length(samples)){
     sample<-samples[i]
     ls.seq<-list()
-    if(fileformat=="Long format, with multiple samples"){
       path1<-paste0(path, sample,"/patterns/")
-    }else{
-      path1<-paste0(path,"/patterns/")
-    }
     if(file.exists(paste0(path1, pattern,"_sequences.txt"))){
       ls.seq[[pattern]]<-as.character(read.delim(paste0(path1,pattern,"_sequences.txt"),
                                                  header=FALSE,check.names = FALSE)[,1])
@@ -50,7 +46,9 @@ generate_logomap<-function(path,pattern,samples,methodin,ticktype,fileformat){
       g<-ggseqlogo(data=ls.seq, method=methodin)
       seqlogo.ls[[sample]]<-g+ggtitle(sample)+
         scale_x_discrete(limits=ticks)+
-        annotate('rect', xmin=(pcharind-0.5), xmax=(pcharind+0.5), ymin = -0.05, ymax = max(g[["layers"]][[1]][["data"]][["y"]]), alpha =0.15,fill='red')
+        annotate('rect', xmin=(pcharind-0.5), xmax=(pcharind+0.5), ymin = -0.05, ymax = max(g[["layers"]][[1]][["data"]][["y"]]), alpha =0.15,fill='red')+
+        theme(text=element_text(family="mono"))
+    
     }
   }
   logomap.pattern<-grid.arrange(grobs=seqlogo.ls)

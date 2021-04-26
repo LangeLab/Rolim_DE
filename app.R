@@ -50,10 +50,10 @@ ui <- dashboardPage(
     ),
     
     dashboardBody(
-        fluidRow(box(width=10,
+        fluidRow(box(width=11,
             plotOutput("heatmap")  %>% withSpinner(color="#0dc5c1")
             )),
-        fluidRow(box(width=10,
+        fluidRow(box(width=11,
             uiOutput("logomaps")  %>% withSpinner(color="#0dc5c1")))
     )
 )
@@ -72,12 +72,12 @@ server <- function(input, output, session){
     })
 
     samplelist<-reactive({
-        if(input$InputFormat=="Long format, with multiple samples"){
         temp<-list.files(path=resultpath())
-        temp[temp!="summary"]}else{
-            validate(need(!is.null(input$quant_data),""))
-            unique(quant_data()[,1])
+        sl<-temp[temp!="summary"]
+        if(!is.null(input$quant_data)){
+            sl<-unique(quant_data()[,1])
         }
+        sl
     })
     output$checkSamples<-renderUI({
         checkboxGroupInput("checkSamples", 
@@ -95,22 +95,13 @@ server <- function(input, output, session){
     
     pattern.summary.list <- reactive({
         ls<-list()
-        if (input$InputFormat=="Long format, with multiple samples"){
         i=1
         for(i in samplelist()){
-            temp.tab<-read.csv(paste0(resultpath(), i, "/patterns/_pattern_summary_table.csv"), header=TRUE,sep=",")[,-1]
+            aa<-grep("_pattern_summary_table.csv",list.files(paste0(resultpath(), i, "/patterns/")))
+            temp.tab<-read.csv(paste0(resultpath(), i, "/patterns/",list.files(paste0(resultpath(), i, "/patterns/"))[aa]), header=TRUE,sep=",")[,-1]
             temp.tab$Pattern<-as.character(temp.tab$Pattern)
             temp.tab$Enrichment..Sample.Frequency...Background.Frequency.<-as.numeric(temp.tab$Enrichment..Sample.Frequency...Background.Frequency.)
             ls[[i]]<-temp.tab
-        }
-        }else{
-            i=1
-            for(i in samplelist()){
-                temp.tab<-read.csv(paste0(resultpath(),"patterns/_pattern_summary_table.csv"), header=TRUE,sep=",")[,-1]
-                temp.tab$Pattern<-as.character(temp.tab$Pattern)
-                temp.tab$Enrichment..Sample.Frequency...Background.Frequency.<-as.numeric(temp.tab$Enrichment..Sample.Frequency...Background.Frequency.)
-                ls[[i]]<-temp.tab
-            }   
         }
         ls
     })
@@ -179,8 +170,8 @@ server <- function(input, output, session){
     })
     
     output$logomaps<-renderUI({
-        validate(need(length(input$checkSamples) > 1, 
-                      "Please select more than one samples"))
+        validate(need(length(input$checkSamples) > 0, 
+                      "Please select at least one sample"))
         lapply(all.pattern(),function(x){
             output[[paste0("Plotfor",x)]]<-renderPlot({generate_logomap(resultpath(), x, input$checkSamples, input$logomapmethod, input$ticktype, input$InputFormat)})
         })
