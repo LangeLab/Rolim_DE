@@ -112,7 +112,12 @@ server <- function(input, output, session){
     
     quant_data_summary_table<-reactive({
         validate(need(input$title!="", ""))
-        df<-read.table(paste0(resultpath(),"summary/",input$title,"_sequence_summary_table.txt"))
+        if (length(input$checkSamples)==1){
+        df<-read.table(paste0(resultpath(),input$checkSamples,"/summary/",input$checkSamples,"_summary_table.txt"), fill=TRUE)
+        }
+        if (length(input$checkSamples)>1){
+        df<-read.table(paste0(resultpath(),"summary/",input$title,"_summary_table.txt"), fill=TRUE)
+        }
         cbind(df[,1:2],df[,unlist(lapply(df,is.double))])
     })
     
@@ -125,7 +130,12 @@ server <- function(input, output, session){
     
     quant_data_summary_table_full<-reactive({
         validate(need(input$title!="", ""))
-        df<-read.table(paste0(resultpath(),"summary/",input$title,"_sequence_summary_table.txt"))
+        if (length(input$checkSamples)==1){
+            df<-read.table(paste0(resultpath(),input$checkSamples,"/summary/",input$checkSamples,"_summary_table.txt"), fill=TRUE)
+        }
+        if (length(input$checkSamples)>1){
+            df<-read.table(paste0(resultpath(),"summary/",input$title,"_summary_table.txt"), fill=TRUE)
+        }
         df
     })
     
