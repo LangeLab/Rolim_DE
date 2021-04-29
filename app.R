@@ -114,11 +114,13 @@ server <- function(input, output, session){
         validate(need(input$title!="", ""))
         if (length(input$checkSamples)==1){
         df<-read.table(paste0(resultpath(),input$checkSamples,"/summary/",input$checkSamples,"_summary_table.txt"), fill=TRUE)
+        df <- df[which(df$aligned_sequence!=""),]
         }
         if (length(input$checkSamples)>1){
         df<-read.table(paste0(resultpath(),"summary/",input$title,"_summary_table.txt"), fill=TRUE)
+        df <- df[which(df$aligned_sequence!=""),]
         }
-        cbind(df[,1:2],df[,unlist(lapply(df,is.double))])
+        cbind(df[,c(1,which(colnames(df)=="aligned_sequence"))],df[,unlist(lapply(df,is.double))])
     })
     
     output$quant_data_selection<-renderUI({
@@ -132,9 +134,11 @@ server <- function(input, output, session){
         validate(need(input$title!="", ""))
         if (length(input$checkSamples)==1){
             df<-read.table(paste0(resultpath(),input$checkSamples,"/summary/",input$checkSamples,"_summary_table.txt"), fill=TRUE)
+            df <- df[which(df$aligned_sequence!=""),]
         }
         if (length(input$checkSamples)>1){
             df<-read.table(paste0(resultpath(),"summary/",input$title,"_summary_table.txt"), fill=TRUE)
+            df <- df[which(df$aligned_sequence!=""),]
         }
         df
     })

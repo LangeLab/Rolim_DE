@@ -16,5 +16,5 @@ transformdata<-function(quant_data_summary_table, checkSamples, colIntensity, bb
   df<-cbind(df[,c(1:2)],df[,colIntensity], bb)
   aa<-cbind(aggregate.data.frame(df[,colIntensity],by=list(df$aligned_sequence),function(x) mean(x, na.rm=TRUE)),
             aggregate.data.frame(df[,grep("\\.",colnames(df))],by=list(df$aligned_sequence),function(x) sum(x, na.rm=TRUE)>0)[,-1])
-  return(aa)
+  return(na.omit(aa))
 }
