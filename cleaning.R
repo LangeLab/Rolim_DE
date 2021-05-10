@@ -10,7 +10,7 @@ match_checked_samples<-function(df, checked_samples){
   return(tempdf)
 }
 
-transformdata<-function(quant_data_summary_table, checkSamples, colIntensity, bb){
+transformdata<-function(quant_data_summary_table, checkSamples, colIntensity, bb, whethernormal){
   bb<-bb[which(bb$input_sample_name %in% checkSamples),grep("\\.",colnames(bb))]
   df<-quant_data_summary_table %>% filter(input_sample_name %in% checkSamples)
   df<-cbind(df[,c(1:2)],df[,colIntensity], bb)

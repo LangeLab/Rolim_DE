@@ -16,7 +16,7 @@ ui <- dashboardPage(
                     label="Select the format of foreground file uploaded to RoLiM:",
                     choices=c("Long format, with multiple samples", "Pre-aligned sequences only"),
                     selected=NULL),
-        conditionalPanel("input.InputFormat=='Long format, with multiple samples'",
+        conditionalPanel("input.InputFormat=='Long format, with multiple samples' && input.heatmapvalue=='Quantitative intensity'",
                          uiOutput("quant_data_selection")),
         uiOutput("checkSamples"),
         checkboxInput("whetherUpload",
@@ -66,9 +66,10 @@ server <- function(input, output, session){
     })
     
     resultpath<-reactive({
-    validate(need(input$jobID,"Please input task ID!"),
+    validate(#need(input$jobID,"Please input task ID!"),
                  need(input$title, "Please input task title!"))
-    paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
+    #paste0("/media/data1/RoLiM/media/", input$jobID,"/", input$title,"/")
+    paste0("D:/Projects_SiyuanChen/Rolim_DE/", input$title,"/")
     })
 
     samplelist<-reactive({
@@ -95,7 +96,6 @@ server <- function(input, output, session){
     
     pattern.summary.list <- reactive({
         ls<-list()
-        i=1
         for(i in samplelist()){
             aa<-grep("_pattern_summary_table.csv",list.files(paste0(resultpath(), i, "/patterns/")))
             temp.tab<-read.csv(paste0(resultpath(), i, "/patterns/",list.files(paste0(resultpath(), i, "/patterns/"))[aa]), header=TRUE,sep=",")[,-1]
@@ -117,7 +117,7 @@ server <- function(input, output, session){
         df <- df[which(df$aligned_sequence!=""),]
         }
         if (length(input$checkSamples)>1){
-        df<-read.table(paste0(resultpath(),"summary/",input$title,"_summary_table.txt"), fill=TRUE)
+        df<-read.table(paste0(resultpath(),"summary/",input$title,"_sequence_summary_table.txt"), fill=TRUE)
         df <- df[which(df$aligned_sequence!=""),]
         }
         cbind(df[,c(1,which(colnames(df)=="aligned_sequence"))],df[,unlist(lapply(df,is.double))])
@@ -137,7 +137,7 @@ server <- function(input, output, session){
             df <- df[which(df$aligned_sequence!=""),]
         }
         if (length(input$checkSamples)>1){
-            df<-read.table(paste0(resultpath(),"summary/",input$title,"_summary_table.txt"), fill=TRUE)
+            df<-read.table(paste0(resultpath(),"summary/",input$title,"_sequence_summary_table.txt"), fill=TRUE)
             df <- df[which(df$aligned_sequence!=""),]
         }
         df
@@ -151,11 +151,13 @@ server <- function(input, output, session){
         }
         #match_checked_samples(df, input$checkSamples)
         }else{
+            dt<-quant_data_summary_table()[,input$colIntensity]
+            if(input$whetherNormal==TRUE){dt<-t(scale(t(dt)))}
             if(input$direction=="row-wise"){
             if (length(input$colIntensity)>1){
-            df <- cbind(quant_data_summary_table()[,1:2], apply(quant_data_summary_table()[,input$colIntensity],1,function(x) mean(x,na.rm=TRUE)))}
+            df <- cbind(quant_data_summary_table()[,1:2], apply(dt,1,function(x) mean(x,na.rm=TRUE)))}
             if (length(input$colIntensity)==1){
-            df <- cbind(quant_data_summary_table()[,1:2], quant_data_summary_table()[,input$colIntensity])
+            df <- cbind(quant_data_summary_table()[,1:2],dt)
             }
             colnames(df)<-c("sample","sequence","intensity")
             }
@@ -174,7 +176,7 @@ server <- function(input, output, session){
         validate(need(!is.null(quant_data()), 
                               "Please input your quantitative intensity data"))
         g<-generate_heatmap(resultpath(), pattern.summary.list(),input$checkSamples, 
-                            input$heatmapvalue, input$whetherNormal, quant_data(),input$InputFormat,input$whetherlog2)}
+                            input$heatmapvalue, quant_data(),input$InputFormat,input$whetherlog2)}
         if (input$direction=="col-wise"){
         validate(need(length(input$colIntensity) > 1, 
                           "Please select more than one column of intensity"))

@@ -4,7 +4,7 @@ library(tidyr)
 library(RColorBrewer)
 my_palette<-colorRampPalette(c("blue", "white", "red"))(n = 100)
 
-generate_heatmap<-function(path,pattern.summary.list, samples, var, whethernormal, quantdata, fileformat,whetherlog2){
+generate_heatmap<-function(path,pattern.summary.list, samples, var, quantdata, fileformat,whetherlog2){
   if (any(is.null(samples))){return()}
   df<-data.frame(pattern=NA, score=NA, sample=NA)
   i<-1
@@ -45,11 +45,9 @@ generate_heatmap<-function(path,pattern.summary.list, samples, var, whethernorma
     temp.M[,-1]<-log10(temp.M[,-1])
     temp.M[is.na(temp.M)]<-0
     M<-as.matrix(temp.M[,-1])
+    M<-10**M
     rownames(M)=temp.M$pattern
     colnames(M)=colnames(temp.M)[-1]
-  }
-  if (whethernormal==TRUE){
-    M<-t(scale(t(M)))
   }
   if(whetherlog2==TRUE){
     M<-log2(M)
@@ -68,9 +66,6 @@ genrate_heatmap_col<-function(quantdata,colIntensity,whethernormal,whetherlog2){
   }
   colnames(M)<-colIntensity
   rownames(M)<-patternsstring
-  if (whethernormal==TRUE){
-    M<-t(scale(t(M)))
-  }
   if(whetherlog2==TRUE){
     M<-log2(M)
   }
